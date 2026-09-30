@@ -250,8 +250,10 @@ def extract_payment_required_from_result(
                 except (json.JSONDecodeError, TypeError):
                     pass
 
-    if structured is not None and from_text is not None and not _payment_required_agree(
-        structured, from_text
+    if (
+        structured is not None
+        and from_text is not None
+        and not _payment_required_agree(structured, from_text)
     ):
         raise PaymentRequiredMismatchError(
             "mcp payment required: structuredContent and content text disagree"
