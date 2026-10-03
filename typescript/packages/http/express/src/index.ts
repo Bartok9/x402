@@ -70,6 +70,9 @@ function sendInternalError(res: Response, error: unknown): void {
  *
  * @param res - The Express response to write to
  * @param response - Payment-error instructions from the HTTP resource server
+ * @param response.body - Optional response body to write
+ * @param response.headers - Response headers, including Content-Type
+ * @param response.isHtml - Whether the body should be sent as HTML
  */
 function sendPaymentErrorBody(
   res: Response,
