@@ -152,7 +152,24 @@ export async function verifyEIP3009(
     isCounterfactual,
     innerSignature,
     eip6492Deployment: classification6492,
+    codeLookupError,
   } = classification;
+
+  // A failed eth_getCode is not an invalid signature. Go and Python report the same
+  // lookup failure as failed_to_verify_signature so callers can retry instead of re-signing.
+  if (codeLookupError !== undefined) {
+    const invalidMessage =
+      codeLookupError instanceof Error ? codeLookupError.message : String(codeLookupError);
+    return {
+      response: {
+        isValid: false,
+        invalidReason: Errors.ErrFailedToVerifySignature,
+        invalidMessage,
+        payer,
+      },
+      classification,
+    };
+  }
 
   if (classification6492) {
     eip6492Deployment = classification6492;

@@ -352,7 +352,19 @@ export class ExactEvmSchemeV1 implements SchemeNetworkFacilitator {
       isCounterfactual,
       innerSignature,
       eip6492Deployment: classification6492,
+      codeLookupError,
     } = await classifyErc6492Payer(this.signer, signature, payer);
+
+    if (codeLookupError !== undefined) {
+      const invalidMessage =
+        codeLookupError instanceof Error ? codeLookupError.message : String(codeLookupError);
+      return {
+        isValid: false,
+        invalidReason: Errors.ErrFailedToVerifySignature,
+        invalidMessage,
+        payer,
+      };
+    }
 
     if (classification6492) {
       eip6492Deployment = classification6492;

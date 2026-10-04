@@ -21,6 +21,11 @@ export type Erc6492Classification = {
   hasDeploymentInfo: boolean;
   innerSignature: `0x${string}`;
   eip6492Deployment?: { factoryAddress: `0x${string}`; factoryCalldata: `0x${string}` };
+  /**
+   * Set when `eth_getCode` for the payer failed. Callers must report a failed-to-verify
+   * reason instead of treating the missing bytecode as an invalid signature.
+   */
+  codeLookupError?: unknown;
 };
 
 const ZERO_ADDRESS = "0x0000000000000000000000000000000000000000" as const;
@@ -51,13 +56,16 @@ export async function classifyErc6492Payer(
     : undefined;
 
   let code: `0x${string}` | undefined;
+  let codeLookupError: unknown;
   try {
     code = await signer.getCode({ address: payerAddress });
-  } catch {
+  } catch (error) {
+    codeLookupError = error;
     code = undefined;
   }
   const isDeployedAtPayer = !!(code && code !== "0x");
-  const isCounterfactual = hasDeploymentInfo && !isDeployedAtPayer;
+  // A failed lookup is not proof that the payer is undeployed.
+  const isCounterfactual = hasDeploymentInfo && !isDeployedAtPayer && codeLookupError === undefined;
 
   return {
     isCounterfactual,
@@ -65,6 +73,7 @@ export async function classifyErc6492Payer(
     hasDeploymentInfo,
     innerSignature,
     eip6492Deployment,
+    codeLookupError,
   };
 }
 

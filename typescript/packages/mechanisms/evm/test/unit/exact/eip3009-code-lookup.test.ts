@@ -1,0 +1,78 @@
+import { describe, expect, it, vi } from "vitest";
+import type { PaymentPayload, PaymentRequirements } from "@x402/core/types";
+import type { FacilitatorEvmSigner } from "../../../src/signer";
+import { verifyEIP3009 } from "../../../src/exact/facilitator/eip3009";
+import { ErrFailedToVerifySignature, ErrInvalidSignature } from "../../../src/exact/facilitator/errors";
+import type { ExactEIP3009Payload } from "../../../src/types";
+
+const PAYER = "0xabcA8d06A3925a6C06D142788a1A90ae431ccB00" as const;
+const PAY_TO = "0x209693Bc6afc0C5328bA36FaF03C514EF312287C" as const;
+const ASSET = "0x036CbD53842c5426634e7929541eC2318f3dCF7e" as const;
+
+function requirements(): PaymentRequirements {
+  return {
+    scheme: "exact",
+    network: "eip155:84532",
+    asset: ASSET,
+    amount: "10000",
+    payTo: PAY_TO,
+    maxTimeoutSeconds: 300,
+    extra: { name: "USDC", version: "2" },
+  };
+}
+
+function payload(req: PaymentRequirements): PaymentPayload {
+  return {
+    x402Version: 2,
+    accepted: req,
+    payload: {},
+  };
+}
+
+function eip3009(): ExactEIP3009Payload {
+  return {
+    signature: `0x${"ab".repeat(65)}`,
+    authorization: {
+      from: PAYER,
+      to: PAY_TO,
+      value: "10000",
+      validAfter: "0",
+      validBefore: "9999999999",
+      nonce: `0x${"11".repeat(32)}`,
+    },
+  };
+}
+
+function signer(getCode: FacilitatorEvmSigner["getCode"]): FacilitatorEvmSigner {
+  return {
+    getAddresses: () => [],
+    readContract: vi.fn(),
+    verifyTypedData: vi.fn(),
+    writeContract: vi.fn(),
+    sendTransaction: vi.fn(),
+    waitForTransactionReceipt: vi.fn(),
+    getCode,
+  };
+}
+
+describe("verifyEIP3009 payer eth_getCode failure", () => {
+  it("reports a failed payer code lookup as failed_to_verify_signature, not an invalid signature", async () => {
+    const req = requirements();
+    const getCode = vi.fn(async ({ address }: { address: `0x${string}` }) => {
+      if (address.toLowerCase() === PAYER.toLowerCase()) {
+        throw new Error("HTTP request failed. Status: 503");
+      }
+      return "0x6080604052" as `0x${string}`;
+    });
+
+    const { response } = await verifyEIP3009(signer(getCode), payload(req), req, eip3009());
+
+    expect(response).toMatchObject({
+      isValid: false,
+      invalidReason: ErrFailedToVerifySignature,
+      payer: PAYER,
+    });
+    expect(response.invalidMessage).toContain("503");
+    expect(response.invalidReason).not.toBe(ErrInvalidSignature);
+  });
+});
