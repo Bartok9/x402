@@ -1,8 +1,12 @@
 import { describe, expect, it, vi } from "vitest";
 import type { PaymentPayload, PaymentRequirements } from "@x402/core/types";
+import { generatePrivateKey, privateKeyToAccount } from "viem/accounts";
 import type { FacilitatorEvmSigner } from "../../../src/signer";
 import { verifyEIP3009 } from "../../../src/exact/facilitator/eip3009";
-import { ErrFailedToVerifySignature, ErrInvalidSignature } from "../../../src/exact/facilitator/errors";
+import {
+  ErrFailedToVerifySignature,
+  ErrInvalidSignature,
+} from "../../../src/exact/facilitator/errors";
 import type { ExactEIP3009Payload } from "../../../src/types";
 
 const PAYER = "0xabcA8d06A3925a6C06D142788a1A90ae431ccB00" as const;
@@ -74,5 +78,54 @@ describe("verifyEIP3009 payer eth_getCode failure", () => {
     });
     expect(response.invalidMessage).toContain("503");
     expect(response.invalidReason).not.toBe(ErrInvalidSignature);
+  });
+
+  it("reuses the first payer code lookup when a second call would fail", async () => {
+    const account = privateKeyToAccount(generatePrivateKey());
+    const req = requirements();
+    req.payTo = PAY_TO;
+    const authorization = {
+      from: account.address,
+      to: PAY_TO,
+      value: "10000",
+      validAfter: "0",
+      validBefore: "9999999999",
+      nonce: `0x${"11".repeat(32)}` as `0x${string}`,
+    };
+    const signature = await account.signTypedData({
+      domain: { name: "USDC", version: "2", chainId: 84532, verifyingContract: ASSET },
+      types: {
+        TransferWithAuthorization: [
+          { name: "from", type: "address" },
+          { name: "to", type: "address" },
+          { name: "value", type: "uint256" },
+          { name: "validAfter", type: "uint256" },
+          { name: "validBefore", type: "uint256" },
+          { name: "nonce", type: "bytes32" },
+        ],
+      },
+      primaryType: "TransferWithAuthorization",
+      message: { ...authorization, value: 10000n, validAfter: 0n, validBefore: 9999999999n },
+    });
+
+    let payerLookups = 0;
+    const getCode = vi.fn(async ({ address }: { address: `0x${string}` }) => {
+      if (address.toLowerCase() !== account.address.toLowerCase()) {
+        return "0x6080604052" as `0x${string}`;
+      }
+      payerLookups += 1;
+      if (payerLookups > 1) throw new Error("HTTP request failed. Status: 503");
+      return "0x" as `0x${string}`;
+    });
+
+    const signed = eip3009();
+    signed.authorization.from = account.address;
+    signed.signature = signature;
+
+    const { response } = await verifyEIP3009(signer(getCode), payload(req), req, signed);
+
+    expect(payerLookups).toBe(1);
+    expect(response.invalidReason).not.toBe(ErrInvalidSignature);
+    expect(response.invalidReason).not.toBe(ErrFailedToVerifySignature);
   });
 });

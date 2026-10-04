@@ -22,6 +22,11 @@ export type Erc6492Classification = {
   innerSignature: `0x${string}`;
   eip6492Deployment?: { factoryAddress: `0x${string}`; factoryCalldata: `0x${string}` };
   /**
+   * Bytecode from the payer `eth_getCode`. `"0x"` is an EOA. Undefined when the lookup failed
+   * or returned nothing. Reuse this for signature checks so verify does not issue a second lookup.
+   */
+  payerCode?: `0x${string}`;
+  /**
    * Set when `eth_getCode` for the payer failed. Callers must report a failed-to-verify
    * reason instead of treating the missing bytecode as an invalid signature.
    */
@@ -73,6 +78,7 @@ export async function classifyErc6492Payer(
     hasDeploymentInfo,
     innerSignature,
     eip6492Deployment,
+    payerCode: code,
     codeLookupError,
   };
 }
