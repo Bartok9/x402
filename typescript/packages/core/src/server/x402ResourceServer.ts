@@ -1061,7 +1061,16 @@ export class x402ResourceServer {
           );
         }
       } catch (error) {
+        // Gate phases fail closed. A hook that cannot complete its check must
+        // not authorize the payment (extension authors otherwise have to wrap
+        // every gate in try/catch). Advisory phases still log and continue.
         this.warnResourceServerHookFailure("beforeVerify", label, error);
+        const detail = error instanceof Error ? error.message : String(error);
+        return {
+          isValid: false,
+          invalidReason: "extension_hook_error",
+          invalidMessage: detail,
+        };
       }
     }
 
@@ -1306,6 +1315,14 @@ export class x402ResourceServer {
           throw error;
         }
         this.warnResourceServerHookFailure("beforeSettle", label, error);
+        const detail = error instanceof Error ? error.message : String(error);
+        throw new SettleError(400, {
+          success: false,
+          errorReason: "extension_hook_error",
+          errorMessage: detail,
+          transaction: "",
+          network: requirements.network,
+        });
       }
     }
 
