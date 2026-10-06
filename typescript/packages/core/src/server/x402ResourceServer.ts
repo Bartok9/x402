@@ -1046,11 +1046,12 @@ export class x402ResourceServer {
         // not authorize the payment (extension authors otherwise have to wrap
         // every gate in try/catch). Advisory phases still log and continue.
         this.warnResourceServerHookFailure("beforeVerify", label, error);
-        const detail = error instanceof Error ? error.message : String(error);
+        // Client-facing text stays fixed. The thrown message can carry an RPC
+        // URL, path, or storage error; the warning log already has the detail.
         return {
           isValid: false,
           invalidReason: "extension_hook_error",
-          invalidMessage: detail,
+          invalidMessage: "extension hook failed",
         };
       }
     }
@@ -1296,11 +1297,11 @@ export class x402ResourceServer {
           throw error;
         }
         this.warnResourceServerHookFailure("beforeSettle", label, error);
-        const detail = error instanceof Error ? error.message : String(error);
+        // Same as beforeVerify: do not echo the thrown message to the payer.
         throw new SettleError(400, {
           success: false,
           errorReason: "extension_hook_error",
-          errorMessage: detail,
+          errorMessage: "extension hook failed",
           transaction: "",
           network: requirements.network,
         });
