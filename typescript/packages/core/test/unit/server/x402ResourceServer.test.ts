@@ -718,7 +718,7 @@ describe("x402ResourceServer", () => {
 
         expect(result.isValid).toBe(false);
         expect(result.invalidReason).toBe("extension_hook_error");
-        expect(result.invalidMessage).toBe("Hook boom");
+        expect(result.invalidMessage).toBe("extension hook failed");
         expect(mockClient.verifyCalls.length).toBe(0);
         expect(warnSpy).toHaveBeenCalledWith(
           expect.stringMatching(
@@ -1188,7 +1188,7 @@ describe("x402ResourceServer", () => {
         } catch (error: any) {
           expect(error.name).toBe("SettleError");
           expect(error.errorReason).toBe("extension_hook_error");
-          expect(error.errorMessage).toBe("Unexpected failure");
+          expect(error.errorMessage).toBe("extension hook failed");
         }
 
         expect(mockClient.settleCalls.length).toBe(0);
