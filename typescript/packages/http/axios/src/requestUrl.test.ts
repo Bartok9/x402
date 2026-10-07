@@ -84,3 +84,61 @@ describe("payment-required request URL", () => {
     expect(hookUrl).toBe(`${origin}${response.data.path}`);
   });
 });
+
+describe("paid retry Cookie serialization", () => {
+  let origin: string;
+  const cookies: string[] = [];
+  const server = createServer((req, res) => {
+    cookies.push(req.headers.cookie ?? "");
+    if (!req.headers["payment-signature"]) {
+      const challenge = {
+        x402Version: 2,
+        resource: { url: `${origin}/paid` },
+        accepts: [
+          {
+            scheme: "fixture",
+            network: "fixture:1",
+            amount: "1",
+            asset: "fixture",
+            payTo: "fixture",
+            maxTimeoutSeconds: 60,
+            extra: {},
+          },
+        ],
+      };
+      res.writeHead(402, {
+        "content-type": "application/json",
+        "payment-required": Buffer.from(JSON.stringify(challenge)).toString("base64"),
+      });
+      res.end();
+      return;
+    }
+    res.writeHead(200, { "content-type": "application/json" });
+    res.end(JSON.stringify({ ok: true }));
+  });
+
+  beforeAll(async () => {
+    await new Promise<void>(resolve => server.listen(0, "127.0.0.1", resolve));
+    origin = `http://127.0.0.1:${(server.address() as AddressInfo).port}`;
+  });
+
+  afterAll(async () => {
+    await new Promise<void>((resolve, reject) =>
+      server.close(error => (error ? reject(error) : resolve())),
+    );
+  });
+
+  it("joins a Cookie array with semicolons on the paid retry", async () => {
+    const client = new x402Client().setSpendControls(false).register("fixture:1", {
+      scheme: "fixture",
+      createPaymentPayload: async () => ({ x402Version: 2, payload: { fixture: true } }),
+    });
+    const api = wrapAxiosWithPayment(axios.create({ baseURL: origin, proxy: false }), client);
+    const response = await api.get("/paid", {
+      headers: { Cookie: ["session=demo", "locale=zh"] },
+    });
+
+    expect(response.status).toBe(200);
+    expect(cookies).toEqual(["session=demo; locale=zh", "session=demo; locale=zh"]);
+  });
+});
