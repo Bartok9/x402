@@ -64,7 +64,9 @@ describe("verifyEIP3009 payer eth_getCode failure", () => {
     const req = requirements();
     const getCode = vi.fn(async ({ address }: { address: `0x${string}` }) => {
       if (address.toLowerCase() === PAYER.toLowerCase()) {
-        throw new Error("HTTP request failed. Status: 503");
+        throw new Error(
+          "HTTP request failed. Status: 503 URL: https://rpc.example/v1/base?token=secret-key",
+        );
       }
       return "0x6080604052" as `0x${string}`;
     });
@@ -77,6 +79,8 @@ describe("verifyEIP3009 payer eth_getCode failure", () => {
       payer: PAYER,
     });
     expect(response.invalidMessage).toContain("503");
+    expect(response.invalidMessage).not.toContain("secret-key");
+    expect(response.invalidMessage).not.toContain("https://");
     expect(response.invalidReason).not.toBe(ErrInvalidSignature);
   });
 

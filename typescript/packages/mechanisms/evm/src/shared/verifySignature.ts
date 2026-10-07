@@ -33,6 +33,18 @@ export type Erc6492Classification = {
   codeLookupError?: unknown;
 };
 
+const URL_IN_TEXT = /https?:\/\/\S+/gi;
+
+/**
+ * Client-visible reason for a failed payer code lookup. `invalidMessage` is returned to the
+ * caller, and a transport error can embed the signer URL (including a query token). Strip URLs.
+ */
+export function payerCodeLookupFailureMessage(error: unknown): string {
+  const raw = error instanceof Error ? error.message : String(error);
+  const stripped = raw.replace(URL_IN_TEXT, "[redacted-url]").replace(/\s+/g, " ").trim();
+  return stripped.length > 0 ? stripped.slice(0, 200) : "payer eth_getCode failed";
+}
+
 const ZERO_ADDRESS = "0x0000000000000000000000000000000000000000" as const;
 
 /**

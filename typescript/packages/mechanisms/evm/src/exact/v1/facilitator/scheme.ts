@@ -8,7 +8,11 @@ import {
   VerifyResponse,
 } from "@x402/core/types";
 import { resolveDataSuffix } from "../../../shared/extensions";
-import { verifyHashSignatureWithCode, classifyErc6492Payer } from "../../../shared/verifySignature";
+import {
+  verifyHashSignatureWithCode,
+  classifyErc6492Payer,
+  payerCodeLookupFailureMessage,
+} from "../../../shared/verifySignature";
 import { PaymentRequirementsV1 } from "@x402/core/types/v1";
 import { getAddress, hashTypedData, Hex, isAddressEqual, parseErc6492Signature } from "viem";
 import { authorizationTypes } from "../../../constants";
@@ -357,8 +361,7 @@ export class ExactEvmSchemeV1 implements SchemeNetworkFacilitator {
     } = await classifyErc6492Payer(this.signer, signature, payer);
 
     if (codeLookupError !== undefined) {
-      const invalidMessage =
-        codeLookupError instanceof Error ? codeLookupError.message : String(codeLookupError);
+      const invalidMessage = payerCodeLookupFailureMessage(codeLookupError);
       return {
         isValid: false,
         invalidReason: Errors.ErrFailedToVerifySignature,

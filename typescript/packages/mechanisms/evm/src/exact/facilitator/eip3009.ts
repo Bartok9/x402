@@ -17,6 +17,7 @@ import { resolveDataSuffix } from "../../shared/extensions";
 import {
   verifyHashSignatureWithCode,
   classifyErc6492Payer,
+  payerCodeLookupFailureMessage,
   Erc6492Classification,
 } from "../../shared/verifySignature";
 import {
@@ -159,8 +160,7 @@ export async function verifyEIP3009(
   // A failed eth_getCode is not an invalid signature. Go and Python report the same
   // lookup failure as failed_to_verify_signature so callers can retry instead of re-signing.
   if (codeLookupError !== undefined) {
-    const invalidMessage =
-      codeLookupError instanceof Error ? codeLookupError.message : String(codeLookupError);
+    const invalidMessage = payerCodeLookupFailureMessage(codeLookupError);
     return {
       response: {
         isValid: false,
