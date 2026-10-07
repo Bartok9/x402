@@ -60,9 +60,9 @@ function cloneAxiosHeaders(headers: InternalAxiosRequestConfig["headers"]): Axio
     // Axios joins a Cookie array with "; " in its HTTP adapter. String()
     // joins with "," and changes the cookie the paid retry sends.
     if (Array.isArray(value)) {
-      const items = value.filter(
-        (item): item is string => typeof item === "string" && item.length > 0,
-      );
+      // Keep empty strings. Axios joins them too, so "" + "locale=zh"
+      // stays "; locale=zh" on the paid retry instead of "locale=zh".
+      const items = value.filter((item): item is string => typeof item === "string");
       if (items.length > 0) {
         acc[key] = items;
       }
