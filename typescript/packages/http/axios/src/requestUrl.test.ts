@@ -131,6 +131,11 @@ describe("paid retry Cookie serialization", () => {
     );
   });
 
+  /**
+   * Builds a fixture client that accepts the loopback payment without a real scheme.
+   *
+   * @returns Client registered for the fixture network
+   */
   function client() {
     return new x402Client().setSpendControls(false).register("fixture:1", {
       scheme: "fixture",
