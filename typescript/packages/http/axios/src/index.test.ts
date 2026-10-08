@@ -231,6 +231,19 @@ describe("wrapAxiosWithPayment()", () => {
     expect(retryConfig.headers.Cookie).toEqual(["", "locale=zh"]);
   });
 
+  it("keeps an empty Cookie array so it still overrides an instance default", async () => {
+    const successResponse = { data: "success" } as AxiosResponse;
+    (mockAxiosClient.request as ReturnType<typeof vi.fn>).mockResolvedValue(successResponse);
+
+    const config = createErrorConfig();
+    config.headers.set("Cookie", []);
+
+    await interceptor(createAxiosError(402, config, validPaymentRequired));
+
+    const retryConfig = (mockAxiosClient.request as ReturnType<typeof vi.fn>).mock.calls[0][0];
+    expect(retryConfig.headers.Cookie).toEqual([]);
+  });
+
   it("should not retry if already retried", async () => {
     const error = createAxiosError(402, createErrorConfig(true), validPaymentRequired);
     await expect(interceptor(error)).rejects.toBe(error);

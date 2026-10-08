@@ -62,10 +62,9 @@ function cloneAxiosHeaders(headers: InternalAxiosRequestConfig["headers"]): Axio
     if (Array.isArray(value)) {
       // Keep empty strings. Axios joins them too, so "" + "locale=zh"
       // stays "; locale=zh" on the paid retry instead of "locale=zh".
-      const items = value.filter((item): item is string => typeof item === "string");
-      if (items.length > 0) {
-        acc[key] = items;
-      }
+      // Keep an empty array. Dropping Cookie: [] lets Axios merge an
+      // instance default back in on the paid retry.
+      acc[key] = value.filter((item): item is string => typeof item === "string");
       return acc;
     }
 

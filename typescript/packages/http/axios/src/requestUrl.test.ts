@@ -87,9 +87,12 @@ describe("payment-required request URL", () => {
 
 describe("paid retry Cookie serialization", () => {
   let origin: string;
-  const cookies: string[] = [];
+  const seen: { cookie?: string; trace?: string }[] = [];
   const server = createServer((req, res) => {
-    cookies.push(req.headers.cookie ?? "");
+    seen.push({
+      cookie: req.headers.cookie,
+      trace: req.headers["x-trace"] as string | undefined,
+    });
     if (!req.headers["payment-signature"]) {
       const challenge = {
         x402Version: 2,
@@ -128,17 +131,53 @@ describe("paid retry Cookie serialization", () => {
     );
   });
 
-  it("joins a Cookie array with semicolons on the paid retry", async () => {
-    const client = new x402Client().setSpendControls(false).register("fixture:1", {
+  function client() {
+    return new x402Client().setSpendControls(false).register("fixture:1", {
       scheme: "fixture",
       createPaymentPayload: async () => ({ x402Version: 2, payload: { fixture: true } }),
     });
-    const api = wrapAxiosWithPayment(axios.create({ baseURL: origin, proxy: false }), client);
+  }
+
+  it("joins a Cookie array with semicolons on the paid retry", async () => {
+    const api = wrapAxiosWithPayment(axios.create({ baseURL: origin, proxy: false }), client());
     const response = await api.get("/paid", {
       headers: { Cookie: ["session=demo", "locale=zh"] },
     });
 
     expect(response.status).toBe(200);
-    expect(cookies).toEqual(["session=demo; locale=zh", "session=demo; locale=zh"]);
+    expect(seen.map(hit => hit.cookie)).toEqual([
+      "session=demo; locale=zh",
+      "session=demo; locale=zh",
+    ]);
+  });
+
+  it("keeps a string Cookie and X-Trace on both HTTP requests", async () => {
+    seen.length = 0;
+    const api = wrapAxiosWithPayment(axios.create({ baseURL: origin, proxy: false }), client());
+    const response = await api.get("/paid", {
+      headers: { Cookie: "session=string", "X-Trace": "keep-me" },
+    });
+
+    expect(response.status).toBe(200);
+    expect(seen).toEqual([
+      { cookie: "session=string", trace: "keep-me" },
+      { cookie: "session=string", trace: "keep-me" },
+    ]);
+  });
+
+  it("keeps Cookie: [] from restoring an instance default on the paid retry", async () => {
+    seen.length = 0;
+    const api = wrapAxiosWithPayment(
+      axios.create({
+        baseURL: origin,
+        proxy: false,
+        headers: { Cookie: "default=demo" },
+      }),
+      client(),
+    );
+    const response = await api.get("/paid", { headers: { Cookie: [] } });
+
+    expect(response.status).toBe(200);
+    expect(seen.map(hit => hit.cookie)).toEqual([undefined, undefined]);
   });
 });
