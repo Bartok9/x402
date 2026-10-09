@@ -37,12 +37,51 @@ export const PAYMENT_REQUIRED_CACHE_CONTROL = "no-store";
  * @param value - Existing Cache-Control header value, or null/empty if unset
  * @returns Cache-Control value with `private` merged in
  */
+/**
+ * Split a Cache-Control value on commas that are outside quoted strings.
+ * Commas inside quotes (including escaped quotes) are part of the value.
+ */
+export function splitCacheControlDirectives(value: string): string[] {
+  const directives: string[] = [];
+  let current = "";
+  let quoted = false;
+
+  for (let i = 0; i < value.length; i++) {
+    const char = value[i];
+    if (char === "\\" && quoted) {
+      current += char;
+      if (i + 1 < value.length) {
+        current += value[i + 1];
+        i++;
+      }
+      continue;
+    }
+    if (char === '"') {
+      quoted = !quoted;
+      current += char;
+      continue;
+    }
+    if (char === "," && !quoted) {
+      directives.push(current);
+      current = "";
+      continue;
+    }
+    current += char;
+  }
+  directives.push(current);
+  return directives;
+}
+
 export function withPrivateCacheControl(value: string | null): string {
   if (!value) {
     return "private";
   }
 
-  const directives = value.split(",").map(directive => directive.trim().toLowerCase());
+  const directives = splitCacheControlDirectives(value).map(directive => {
+    const name = directive.trim().toLowerCase();
+    const eq = name.indexOf("=");
+    return eq === -1 ? name : name.slice(0, eq).trim();
+  });
   if (directives.includes("private")) {
     return value;
   }
