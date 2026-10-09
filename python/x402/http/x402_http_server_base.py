@@ -74,12 +74,58 @@ logger = logging.getLogger("x402")
 PAYMENT_REQUIRED_CACHE_CONTROL = "no-store"
 
 
+def split_cache_control_directives(value: str) -> list[str]:
+    """Split on commas outside quoted strings, including escaped quotes."""
+    directives: list[str] = []
+    current: list[str] = []
+    quoted = False
+    i = 0
+    while i < len(value):
+        char = value[i]
+        if char == "\\" and quoted:
+            current.append(char)
+            if i + 1 < len(value):
+                i += 1
+                current.append(value[i])
+            i += 1
+            continue
+        if char == '"':
+            quoted = not quoted
+            current.append(char)
+            i += 1
+            continue
+        if char == "," and not quoted:
+            directives.append("".join(current))
+            current = []
+            i += 1
+            continue
+        current.append(char)
+        i += 1
+    directives.append("".join(current))
+    return directives
+
+
+def _cache_control_directive_name(directive: str) -> str:
+    name = directive.strip().lower()
+    eq = name.find("=")
+    if eq == -1:
+        return name
+    return name[:eq].strip()
+
+
 def with_private_cache_control(value: str | None) -> str:
-    """Append the ``private`` directive to an existing Cache-Control header value."""
+    """Append the ``private`` directive to an existing Cache-Control header value.
+
+    Commas inside quoted directive values are not treated as separators, so text
+    such as ``example="a, private, b"`` does not count as a ``private`` directive.
+    """
     if not value:
         return "private"
 
-    directives = [directive.strip().lower() for directive in value.split(",")]
+    directives = [
+        _cache_control_directive_name(directive)
+        for directive in split_cache_control_directives(value)
+    ]
     if "private" in directives:
         return value
 
