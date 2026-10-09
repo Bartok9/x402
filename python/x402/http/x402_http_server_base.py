@@ -124,7 +124,8 @@ def with_private_cache_control(value: str | None) -> str:
     if not value:
         return "private"
 
-    if any(_is_unqualified_private(directive) for directive in split_cache_control_directives(value)):
+    directives = split_cache_control_directives(value)
+    if any(_is_unqualified_private(directive) for directive in directives):
         return value
 
     return f"{value}, private"

@@ -31,15 +31,11 @@ export const SETTLEMENT_OVERRIDES_HEADER = "Settlement-Overrides";
 export const PAYMENT_REQUIRED_CACHE_CONTROL = "no-store";
 
 /**
- * Appends the `private` directive to an existing Cache-Control header value.
- * Shared caches must not store responses with user-specific settlement metadata.
- *
- * @param value - Existing Cache-Control header value, or null/empty if unset
- * @returns Cache-Control value with `private` merged in
- */
-/**
  * Split a Cache-Control value on commas that are outside quoted strings.
  * Commas inside quotes (including escaped quotes) are part of the value.
+ *
+ * @param value - Raw Cache-Control header value
+ * @returns Directives split only on unquoted commas
  */
 export function splitCacheControlDirectives(value: string): string[] {
   const directives: string[] = [];
@@ -72,6 +68,13 @@ export function splitCacheControlDirectives(value: string): string[] {
   return directives;
 }
 
+/**
+ * Appends the `private` directive to an existing Cache-Control header value.
+ * Shared caches must not store responses with user-specific settlement metadata.
+ *
+ * @param value - Existing Cache-Control header value, or null/empty if unset
+ * @returns Cache-Control value with `private` merged in
+ */
 export function withPrivateCacheControl(value: string | null): string {
   if (!value) {
     return "private";
