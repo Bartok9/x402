@@ -38,6 +38,9 @@ const URL_IN_TEXT = /https?:\/\/\S+/gi;
 /**
  * Client-visible reason for a failed payer code lookup. `invalidMessage` is returned to the
  * caller, and a transport error can embed the signer URL (including a query token). Strip URLs.
+ *
+ * @param error - The thrown lookup failure, or any non-Error value caught at the call site.
+ * @returns A URL-stripped message, truncated to 200 characters, or a fixed fallback when empty.
  */
 export function payerCodeLookupFailureMessage(error: unknown): string {
   const raw = error instanceof Error ? error.message : String(error);
