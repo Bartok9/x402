@@ -2131,6 +2131,11 @@ func TestWithPrivateCacheControl(t *testing.T) {
 			input: `public, example="a, \"private\", b"`,
 			want:  `public, example="a, \"private\", b", private`,
 		},
+		{
+			name:  "field-qualified private is not whole-response private",
+			input: `public, max-age=60, private="Set-Cookie"`,
+			want:  `public, max-age=60, private="Set-Cookie", private`,
+		},
 	}
 
 	for _, tt := range tests {

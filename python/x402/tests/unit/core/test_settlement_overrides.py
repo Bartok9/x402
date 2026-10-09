@@ -242,6 +242,10 @@ class TestCacheControl:
         value = 'public, example="a, \\"private\\", b"'
         assert with_private_cache_control(value) == f"{value}, private"
 
+    def test_field_qualified_private_does_not_protect_the_response(self):
+        value = 'public, max-age=60, private="Set-Cookie"'
+        assert with_private_cache_control(value) == f"{value}, private"
+
     def test_create_http_response_sets_no_store(self):
         http_server = x402HTTPServerBase(MagicMock(), {"*": RouteConfig(accepts=[])})
         payment_required = PaymentRequired(

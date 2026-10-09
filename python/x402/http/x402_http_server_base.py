@@ -105,12 +105,14 @@ def split_cache_control_directives(value: str) -> list[str]:
     return directives
 
 
-def _cache_control_directive_name(directive: str) -> str:
+def _is_unqualified_private(directive: str) -> bool:
+    """True only for a whole-response ``private`` token.
+
+    RFC 9111 §5.2.2.7 treats ``private="field-name"`` as field-qualified, so a
+    shared cache may still store the rest of the response.
+    """
     name = directive.strip().lower()
-    eq = name.find("=")
-    if eq == -1:
-        return name
-    return name[:eq].strip()
+    return "=" not in name and name == "private"
 
 
 def with_private_cache_control(value: str | None) -> str:
@@ -122,11 +124,10 @@ def with_private_cache_control(value: str | None) -> str:
     if not value:
         return "private"
 
-    directives = [
-        _cache_control_directive_name(directive)
+    if any(
+        _is_unqualified_private(directive)
         for directive in split_cache_control_directives(value)
-    ]
-    if "private" in directives:
+    ):
         return value
 
     return f"{value}, private"
