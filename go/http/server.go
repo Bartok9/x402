@@ -940,12 +940,16 @@ func splitCacheControlDirectives(value string) []string {
 	return directives
 }
 
-func cacheControlDirectiveName(directive string) string {
+// cacheControlIsUnqualifiedPrivate reports a whole-response private directive.
+// RFC 9111 §5.2.2.7 treats private="field-name" as field-qualified, so a shared
+// cache may still store the rest of the response. Only an unqualified private
+// token satisfies the settlement-receipt guard.
+func cacheControlIsUnqualifiedPrivate(directive string) bool {
 	name := strings.TrimSpace(directive)
 	if eq := strings.IndexByte(name, '='); eq >= 0 {
-		name = name[:eq]
+		return false
 	}
-	return strings.TrimSpace(name)
+	return strings.EqualFold(name, "private")
 }
 
 // WithPrivateCacheControl appends the private directive for 200 responses with
@@ -956,7 +960,7 @@ func WithPrivateCacheControl(value string) string {
 		return "private"
 	}
 	for _, directive := range splitCacheControlDirectives(value) {
-		if strings.EqualFold(cacheControlDirectiveName(directive), "private") {
+		if cacheControlIsUnqualifiedPrivate(directive) {
 			return value
 		}
 	}

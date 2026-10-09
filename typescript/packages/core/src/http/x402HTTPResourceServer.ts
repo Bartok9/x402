@@ -77,12 +77,14 @@ export function withPrivateCacheControl(value: string | null): string {
     return "private";
   }
 
-  const directives = splitCacheControlDirectives(value).map(directive => {
+  // Only an unqualified `private` token marks the whole response private.
+  // RFC 9111 §5.2.2.7: private="field-name" is field-qualified and still
+  // leaves the rest of the response cacheable by a shared cache.
+  const hasUnqualifiedPrivate = splitCacheControlDirectives(value).some(directive => {
     const name = directive.trim().toLowerCase();
-    const eq = name.indexOf("=");
-    return eq === -1 ? name : name.slice(0, eq).trim();
+    return !name.includes("=") && name === "private";
   });
-  if (directives.includes("private")) {
+  if (hasUnqualifiedPrivate) {
     return value;
   }
 

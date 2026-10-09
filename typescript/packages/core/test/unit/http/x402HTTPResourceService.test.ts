@@ -1579,5 +1579,10 @@ describe("x402HTTPResourceServer", () => {
       const value = 'public, example="a, \\"private\\", b"';
       expect(withPrivateCacheControl(value)).toBe(`${value}, private`);
     });
+
+    it("appends private when the existing directive is field-qualified", () => {
+      const value = 'public, max-age=60, private="Set-Cookie"';
+      expect(withPrivateCacheControl(value)).toBe(`${value}, private`);
+    });
   });
 });
