@@ -996,6 +996,7 @@ export class x402HTTPResourceServer {
    * Create settlement response headers
    *
    * @param settleResponse - Settlement response
+   * @param existingExposeHeaders - Existing Access-Control-Expose-Headers value, if any
    * @returns Headers to add to response
    */
   createSettlementHeaders(
@@ -1003,10 +1004,7 @@ export class x402HTTPResourceServer {
     existingExposeHeaders?: string | null,
   ): Record<string, string> {
     const encoded = encodePaymentResponseHeader(settleResponse);
-    return withPaymentCorsExposeHeaders(
-      { "PAYMENT-RESPONSE": encoded },
-      existingExposeHeaders,
-    );
+    return withPaymentCorsExposeHeaders({ "PAYMENT-RESPONSE": encoded }, existingExposeHeaders);
   }
 
   /**
