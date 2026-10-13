@@ -32,7 +32,7 @@ describe("payment CORS expose headers", () => {
     );
 
     expect(merged["access-control-expose-headers"]).toBe(
-      "X-Custom, payment-required, X-Other, PAYMENT-RESPONSE",
+      "X-Other, PAYMENT-RESPONSE, X-Custom, payment-required",
     );
     expect(merged[ACCESS_CONTROL_EXPOSE_HEADERS]).toBeUndefined();
   });
@@ -51,9 +51,9 @@ describe("payment CORS expose headers", () => {
 
     expect(written["PAYMENT-RESPONSE"]).toBe("receipt");
     expect(exposedNames(written[ACCESS_CONTROL_EXPOSE_HEADERS])).toEqual([
+      "x-custom",
       "payment-required",
       "payment-response",
-      "x-custom",
     ]);
   });
 

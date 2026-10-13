@@ -53,7 +53,10 @@ export function withPaymentCorsExposeHeaders(
     ) ?? ACCESS_CONTROL_EXPOSE_HEADERS;
   const names: string[] = [];
   const seen = new Set<string>();
-  for (const source of [headers[exposeKey], existingExposeHeaders]) {
+  // Existing names stay first so the app's expose list is unchanged. Payment
+  // protocol names are appended only when missing, matching the Python/Go
+  // helpers.
+  const append = (source: string | undefined | null) => {
     for (const name of (source ?? "").split(",")) {
       const trimmed = name.trim();
       if (!trimmed || seen.has(trimmed.toLowerCase())) {
@@ -62,14 +65,10 @@ export function withPaymentCorsExposeHeaders(
       names.push(trimmed);
       seen.add(trimmed.toLowerCase());
     }
-  }
-
-  for (const required of PAYMENT_PROTOCOL_EXPOSE_HEADERS) {
-    if (!seen.has(required.toLowerCase())) {
-      names.push(required);
-      seen.add(required.toLowerCase());
-    }
-  }
+  };
+  append(existingExposeHeaders);
+  append(headers[exposeKey]);
+  append(PAYMENT_PROTOCOL_EXPOSE_HEADERS.join(", "));
 
   return {
     ...headers,
