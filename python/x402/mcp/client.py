@@ -21,8 +21,6 @@ Example:
 
 from __future__ import annotations
 
-import json
-import re
 import warnings
 from collections.abc import Callable
 from contextlib import asynccontextmanager
@@ -43,9 +41,6 @@ from .types import (
     SyncPaymentRequiredHook,
 )
 from .utils import (
-    PaymentRequiredMismatchError,
-    _extract_payment_required_from_object,
-    _payment_required_agree,
     attach_payment_to_meta,
     convert_mcp_result,
     extract_payment_required_from_result,
@@ -201,42 +196,12 @@ class x402MCPSession:
     def _extract_payment_required(self, result: Any) -> Any:
         """Extract PaymentRequired (x402 v1 or v2) from an error result.
 
-        Prefers ``structuredContent`` (per spec), falls back to parsing
-        ``content[0].text`` as JSON. When both representations are payment-required
-        objects, they must encode the same terms or this raises
-        PaymentRequiredMismatchError so auto-pay does not sign one while a hook
-        or UI reads the other. Also handles FastMCP-wrapped error formats via
-        regex fallback. Version-aware so v1 servers are detected too.
+        Shares ``extract_payment_required_from_result`` with the sync and async
+        clients so content[1] and FastMCP-wrapped text refuse the same way.
+        Raises PaymentRequiredMismatchError when structuredContent and content
+        text both parse but disagree.
         """
-        structured = None
-        if hasattr(result, "structuredContent") and result.structuredContent:
-            sc = result.structuredContent
-            if isinstance(sc, dict) and "accepts" in sc:
-                structured = _extract_payment_required_from_object(sc)
-
-        from_text = None
-        if hasattr(result, "content") and result.content:
-            for item in result.content:
-                if not hasattr(item, "text"):
-                    continue
-                parsed = _try_extract_payment_json(item.text)
-                if not parsed:
-                    continue
-                from_text = _extract_payment_required_from_object(parsed)
-                if from_text is not None:
-                    break
-
-        if (
-            structured is not None
-            and from_text is not None
-            and not _payment_required_agree(structured, from_text)
-        ):
-            raise PaymentRequiredMismatchError(
-                "mcp payment required: structuredContent and content text disagree"
-            )
-        if structured is not None:
-            return structured
-        return from_text
+        return extract_payment_required_from_result(convert_mcp_result(result))
 
 
 class x402MCPClientSync:
@@ -517,33 +482,6 @@ async def create_x402_mcp_client(
             )
             await mcp_session.initialize()
             yield mcp_session
-
-
-def _try_extract_payment_json(text: str) -> dict | None:
-    """Try to extract payment required JSON from text.
-
-    Handles both raw JSON and FastMCP-wrapped error format like:
-    ``Error executing tool get_weather: {"x402Version": 2, "accepts": [...]}``
-    """
-    # Try direct parse first
-    try:
-        parsed = json.loads(text)
-        if isinstance(parsed, dict) and "accepts" in parsed:
-            return parsed
-    except (json.JSONDecodeError, TypeError):
-        pass
-
-    # Try to extract JSON from FastMCP error wrapper
-    match = re.search(r'\{.*"accepts"\s*:\s*\[.*\].*\}', text, re.DOTALL)
-    if match:
-        try:
-            parsed = json.loads(match.group(0))
-            if isinstance(parsed, dict) and "accepts" in parsed:
-                return parsed
-        except (json.JSONDecodeError, TypeError):
-            pass
-
-    return None
 
 
 def wrap_mcp_client_with_payment_sync(
