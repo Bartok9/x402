@@ -715,6 +715,7 @@ class TestConsecutivePayments:
         mock_client = MockX402ClientWithCounter()
 
         payment_required = PaymentRequired(
+            resource=ResourceInfo(url="https://example.com/resource"),
             x402_version=2,
             accepts=[make_payment_requirements()],
         )

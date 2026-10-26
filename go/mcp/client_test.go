@@ -1153,6 +1153,7 @@ func TestX402MCPClient_CallTool_ProbeTimeoutDefault300s(t *testing.T) {
 func TestX402MCPClient_CallTool_PaidTimeoutFromAcceptMaxTimeoutSeconds(t *testing.T) {
 	paymentRequired := types.PaymentRequired{
 		X402Version: 2,
+		Resource:    &types.ResourceInfo{URL: "https://example.com/resource"},
 		Accepts: []types.PaymentRequirements{{
 			Scheme:            "exact",
 			Network:           "eip155:84532",
@@ -1263,6 +1264,7 @@ func TestX402MCPClient_CallTool_RespectsCallerDeadline(t *testing.T) {
 func TestX402MCPClient_CallTool_PaidTimeoutClampsHugeAcceptToDefaultCap(t *testing.T) {
 	paymentRequired := types.PaymentRequired{
 		X402Version: 2,
+		Resource:    &types.ResourceInfo{URL: "https://example.com/resource"},
 		Accepts: []types.PaymentRequirements{{
 			Scheme:            "exact",
 			Network:           "eip155:84532",
@@ -1291,6 +1293,7 @@ func TestX402MCPClient_CallTool_PaidTimeoutClampsHugeAcceptToDefaultCap(t *testi
 func TestX402MCPClient_CallTool_PaidTimeoutHonoursRaisedMaxRequestTimeout(t *testing.T) {
 	paymentRequired := types.PaymentRequired{
 		X402Version: 2,
+		Resource:    &types.ResourceInfo{URL: "https://example.com/resource"},
 		Accepts: []types.PaymentRequirements{{
 			Scheme:            "exact",
 			Network:           "eip155:84532",
@@ -1487,6 +1490,7 @@ func TestX402MCPClient_CallToolWithPayment_RetriesOnceWhenHookSignalsRecovered(t
 
 	pr := types.PaymentRequired{
 		X402Version: 2,
+		Resource:    &types.ResourceInfo{URL: "https://example.com/resource"},
 		Accepts:     []types.PaymentRequirements{testPaymentRequirements()},
 	}
 	mockMCPCaller := &mockMCPCaller{
@@ -1553,7 +1557,9 @@ func TestX402MCPClient_CallToolWithPayment_RecoveryTimeout(t *testing.T) {
 			requirement.MaxTimeoutSeconds = tc.acceptSeconds
 			caller := &mockMCPCaller{callToolResults: []MCPToolResult{
 				paymentRequiredMCPToolResult(t, types.PaymentRequired{
-					X402Version: 2, Accepts: []types.PaymentRequirements{requirement},
+					X402Version: 2,
+					Resource:    &types.ResourceInfo{URL: "https://example.com/resource"},
+					Accepts:     []types.PaymentRequirements{requirement},
 				}),
 				{Content: []MCPContentItem{{Type: "text", Text: "recovered"}}},
 			}}
@@ -1586,6 +1592,7 @@ func TestX402MCPClient_CallToolWithPayment_NoRecoveryWhenHookDeclines(t *testing
 
 	pr := types.PaymentRequired{
 		X402Version: 2,
+		Resource:    &types.ResourceInfo{URL: "https://example.com/resource"},
 		Accepts:     []types.PaymentRequirements{testPaymentRequirements()},
 	}
 	mockMCPCaller := &mockMCPCaller{

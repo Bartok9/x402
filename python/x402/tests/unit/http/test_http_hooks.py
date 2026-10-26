@@ -289,7 +289,12 @@ class TestV1PayloadRejected:
         async def mock_create_payment_required(
             _requirements, _resource, error, _extensions, **_kwargs
         ):
-            return PaymentRequired(x402_version=2, error=error, accepts=requirements)
+            return PaymentRequired(
+                x402_version=2,
+                error=error,
+                resource=ResourceInfo(url="https://example.com/resource"),
+                accepts=requirements,
+            )
 
         server.create_payment_required_response = AsyncMock(
             side_effect=mock_create_payment_required
